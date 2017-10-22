@@ -3,7 +3,7 @@
     "name": "No Coin",
     "description": "This extension will analyze a page's javascript files and block coin mining.",
     "version": "1.0",
-    "homepage_url": "https://github.com/Brandon-T",
+    "homepage_url": "https://github.com/Brandon-T/No-Coin",
     "browser_action": {
         "default_icon": "icon.png"
     },
@@ -22,7 +22,7 @@
     "applications": {
         "gecko": {
             "id": "{C8426511-2B5E-4EE8-AD5B-4BA1E517D218}",
-            "strict_min_version": "40.0"
+            "strict_min_version": "56.0"
         }
     }
 }
