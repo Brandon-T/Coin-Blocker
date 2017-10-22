@@ -26,7 +26,7 @@
 				<key>Identifier</key>
 				<string>com.xio.nocoin.menu</string>
 				<key>Image</key>
-				<string>icon.png</string>
+				<string>icon-64.png</string>
 				<key>Include By Default</key>
 				<true/>
 				<key>Label</key>
