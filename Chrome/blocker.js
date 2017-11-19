@@ -1,64 +1,51 @@
-function escapeRegExp(string) {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
-}
+var urls = ["Coin-Hive", "CoinHive"];
+var words = ["Miner", "CoinHive", "Coin-Hive", "CryptoNight", "CryptoNightWASM", "HashesPerSecond", "Hash_Accepted"];
 
-function stringContains(str, words) {
+function dataContains(url, str, words) {
     for (var i = 0; i < words.length; ++i) {
         if (str.toLowerCase().indexOf(words[i].toLowerCase()) !== -1) {
+
+            chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+                chrome.tabs.sendMessage(tabs[0].id, { greeting: url }, function (response) {
+                    console.log(response.farewell);
+                });
+            });
+
             return true;
         }
     }
+
     return false;
 }
 
-function scanJS() {
-    var urls = ["Coin-Hive", "CoinHive"];
-    var words = ["Miner", "CoinHive", "Coin-Hive", "CryptoNight", "CryptoNightWASM", "HashesPerSecond", "Hash_Accepted"];
+function webListener(requestDetails) {
+    var asyncCancel = new Promise((resolve, reject) => {
 
-    var scripts = document.getElementsByTagName("script");
-    for (var i = 0; i < scripts.length; ++i) {
-        if (scripts[i].src !== undefined && scripts[i].src !== null && scripts[i].src.length > 0) {
-            if (stringContains(scripts[i].src, urls)) {
-                deleteElements([scripts[i]]);
-            }
-        }
-        else if (stringContains(scripts[i].textContent, words)) {
-            deleteElements([scripts[i]]);
-        }
-    }
+        let request = new XMLHttpRequest();
 
-    var observer = new MutationObserver(removeBadJS);
-    observer.observe(document, { subtree: true, childList: true });
-    document.addEventListener('DOMContentLoaded', function () {
-        observer.disconnect();
-    }, false);
-
-    function removeBadJS(elements) {
-        var scripts = document.getElementsByTagName("script");
-        for (var i = 0; i < scripts.length; ++i) {
-            if (scripts[i].src !== undefined && scripts[i].src !== null && scripts[i].src.length > 0) {
-                if (stringContains(scripts[i].src, urls)) {
-                    deleteElements([scripts[i]]);
+        request.onload = function () {
+            if (request.readyState === 4) {
+                if (request.status === 200) {
+                    return resolve({
+                        cancel: dataContains(requestDetails.url, request.responseText, urls) || dataContains(requestDetails.url, request.responseText, words)
+                    });
+                }
+                else {
+                    resolve({ cancel: true });
                 }
             }
-            else if (stringContains(scripts[i].textContent, words)) {
-                deleteElements([scripts[i]]);
-            }
-        }
-    }
+        };
 
-    function deleteElements(nodes) {
-        [].forEach.call(nodes, function (node) { node.remove() });
-    }
+        request.open('GET', requestDetails.url, true);
+        request.send();
+    });
+
+    return asyncCancel;
 }
 
-chrome.storage.sync.get('block', function (res) {
-    scanJS();
-});
-
-chrome.storage.onChanged.addListener(function (changes, namespace) {
-    chrome.storage.sync.get('block', function (res) {
-        scanJS();
-    });
-});
-
+chrome.webRequest.onBeforeRequest.addListener(
+    webListener, {
+        urls: ["<all_urls>"],
+        types: ["script"]
+    }, ["blocking"]
+);
