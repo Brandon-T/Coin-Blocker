@@ -1,8 +1,24 @@
 var urls = ["Coin-Hive", "CoinHive"];
-var words = ["Miner", "CoinHive", "Coin-Hive", "CryptoNight", "CryptoNightWASM", "HashesPerSecond", "Hash_Accepted"];
+var words = ["Miner", "CoinHive", "Coin-Hive", "CryptoNight", "CryptoNightWASM", "CNight", "HashesPerSecond", "Hash_Accepted",
+    "TWluZXI=", "Q29pbkhpdmU=", "Q29pbi1IaXZl", "Q3J5cHRvTmlnaHQ=", "Q3J5cHRvTmlnaHRXQVNN", "Q05pZ2h0", "SGFzaGVzUGVyU2Vjb25k", "SGFzaF9BY2NlcHRlZA=="];
+var exception_urls = [];
+var currentTabURL = window.location.href;
 
 function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+}
+
+function urlMatches(url) {
+    if (exception_urls.length > 0) {
+        for (var i = 0; i < exception_urls.length; ++i) {
+            var pattern = new RegExp(exception_urls[i].toLowerCase());
+            if (pattern.test(url)) {
+                console.log("URL IS ACCEPTED: " + url);
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 function stringContains(str, words) {
@@ -19,9 +35,9 @@ function scanJS() {
 
     var observer = new MutationObserver(removeBadJS);
     observer.observe(document, { subtree: true, childList: true });
-    document.addEventListener('DOMContentLoaded', function () {
-        observer.disconnect();
-    }, false);
+    // document.addEventListener('DOMContentLoaded', function () {
+    //     observer.disconnect();
+    // }, false);
 
     function removeBadJS(elements) {
         var scripts = document.getElementsByTagName("script");
@@ -38,23 +54,65 @@ function scanJS() {
     }
 
     function deleteElements(nodes) {
-        [].forEach.call(nodes, function (node) { 
+        [].forEach.call(nodes, function (node) {
             node.remove()
         });
     }
 }
 
-chrome.storage.sync.get('block', function (res) {
-    scanJS();
+function scanIfPossible() {
+    if (exception_urls.length > 0) {
+        if (!urlMatches(currentTabURL)) {
+            scanJS();
+        }
+    }
+    else {
+        scanJS();
+    }
+}
+
+chrome.storage.sync.get({
+    exceptions_domains: [],
+}, function (items) {
+    exception_urls = [];
+    var domains = items["exceptions_domains"];
+    $.each(domains, function (index, value) {
+        if (value.length > 0) {
+            exception_urls.push(value.toLowerCase());
+        }
+    });
+
+    scanIfPossible()
 });
 
 chrome.storage.onChanged.addListener(function (changes, namespace) {
-    chrome.storage.sync.get('block', function (res) {
-        scanJS();
+    chrome.storage.sync.get({
+        exceptions_domains: [],
+    }, function (items) {
+        exception_urls = [];
+        var domains = items["exceptions_domains"];
+        $.each(domains, function (index, value) {
+            if (value.length > 0) {
+                exception_urls.push(value.toLowerCase());
+            }
+        });
+
+        scanIfPossible()
     });
 });
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-    urls.push(request.greeting);
+
+    var messageId = request.greeting.messageId;
+    if (messageId == -1) {
+        urls.push(request.greeting.badURL);
+        console.log("BLOCKING DANGEROUS URL: " + request.greeting.badURL);
+        scanIfPossible();
+    }
+
     sendResponse({ farewell: request.greeting });
 });
+
+document.addEventListener('DOMContentLoaded', function () {
+    currentTabURL = window.location.href;
+}, false);

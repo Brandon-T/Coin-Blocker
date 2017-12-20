@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>No Miner Extension Settings</title>
+    <style>
+        table {
+            font-family: arial, sans-serif;
+            border-collapse: collapse;
+            width: 100%;
+            border: 1px solid black;
+        }
+
+        td,
+        th {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+
+        tr:nth-child(even) {
+            background-color: #dddddd;
+        }
+    </style>
+    <script src="jquery-3.2.1.min.js"></script>
+</head>
+
+<body>
+
+    <h1>White-List URLs:</h1>
+    <br />
+
+    <label for="urlDomain">Add URL Exception: </label>
+    <input id="urlDomain" type="text" />
+    <button id="addButton">Add</button>
+    <br />
+    <br />
+
+    <table id="urlTable">
+        <thead>
+            <th>URLs</th>
+            <th>Options</th>
+        </thead>
+    </table>
+
+    <label id="status"></label>
+    <script src="options.js"></script>
+</body>
+
+</html>

@@ -6,6 +6,7 @@
     "browser_action": {
         "default_icon": "icon.png"
     },
+    "options_page": "settings.html",
     "content_scripts": [
         {
             "matches": [
@@ -13,6 +14,7 @@
                 "https://*/*"
             ],
             "js": [
+                "jquery-3.2.1.min.js",
                 "blocker2.js"
             ],
             "run_at": "document_start",
@@ -21,10 +23,12 @@
     ],
     "background": {
         "scripts": [
+            "jquery-3.2.1.min.js",
             "blocker.js"
         ]
     },
     "permissions": [
+        "tabs",
         "activeTab",
         "storage",
         "webRequest",

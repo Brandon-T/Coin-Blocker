@@ -14,7 +14,8 @@ function stringContains(str, words) {
 
 function scanJS() {
     var urls = ["Coin-Hive", "CoinHive"];
-    var words = ["Miner", "CoinHive", "Coin-Hive", "CryptoNight", "CryptoNightWASM", "HashesPerSecond", "Hash_Accepted"];
+    var words = ["Miner", "CoinHive", "Coin-Hive", "CryptoNight", "CryptoNightWASM", "CNight", "HashesPerSecond", "Hash_Accepted",
+        "TWluZXI=", "Q29pbkhpdmU=", "Q29pbi1IaXZl", "Q3J5cHRvTmlnaHQ=", "Q3J5cHRvTmlnaHRXQVNN", "Q05pZ2h0", "SGFzaGVzUGVyU2Vjb25k", "SGFzaF9BY2NlcHRlZA=="];
 
     var scripts = document.getElementsByTagName("script");
     for (var i = 0; i < scripts.length; ++i) {
@@ -53,7 +54,7 @@ function scanJS() {
     }
 }
 
-window.addEventListener('storage', function(e) {
+window.addEventListener('storage', function (e) {
     scanJS();
 }, false);
 

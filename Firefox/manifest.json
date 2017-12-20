@@ -1,24 +1,30 @@
 {
     "manifest_version": 2,
-    "name": "No Coin",
+    "name": "No Miner",
     "description": "This extension will analyze a page's javascript files and block coin mining.",
-    "version": "1.0",
-    "homepage_url": "https://github.com/Brandon-T/No-Coin",
+    "version": "1.0.1",
+    "homepage_url": "https://github.com/Brandon-T/Coin-Blocker",
     "browser_action": {
         "default_icon": "icon.png"
     },
     "background": {
         "scripts": [
+            "jquery-3.2.1.min.js",
             "blocker.js"
         ]
     },
     "permissions": [
+        "tabs",
         "activeTab",
         "storage",
         "webRequest",
         "webRequestBlocking",
         "<all_urls>"
     ],
+    "options_ui": {
+        "page": "settings.html",
+        "browser_style": false
+    },
     "applications": {
         "gecko": {
             "id": "{C8426511-2B5E-4EE8-AD5B-4BA1E517D218}",
