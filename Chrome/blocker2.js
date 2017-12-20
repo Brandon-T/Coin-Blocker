@@ -35,9 +35,9 @@ function scanJS() {
 
     var observer = new MutationObserver(removeBadJS);
     observer.observe(document, { subtree: true, childList: true });
-    // document.addEventListener('DOMContentLoaded', function () {
-    //     observer.disconnect();
-    // }, false);
+    document.addEventListener('DOMContentLoaded', function () {
+        observer.disconnect();
+    }, false);
 
     function removeBadJS(elements) {
         var scripts = document.getElementsByTagName("script");
@@ -103,14 +103,14 @@ chrome.storage.onChanged.addListener(function (changes, namespace) {
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 
-    var messageId = request.greeting.messageId;
+    var messageId = request.messageId;
     if (messageId == -1) {
-        urls.push(request.greeting.badURL);
-        console.log("BLOCKING DANGEROUS URL: " + request.greeting.badURL);
+        urls.push(request.badURL);
+        console.log("BLOCKING DANGEROUS URL: " + request.badURL);
         scanIfPossible();
     }
 
-    sendResponse({ farewell: request.greeting });
+    sendResponse({ farewell: request });
 });
 
 document.addEventListener('DOMContentLoaded', function () {

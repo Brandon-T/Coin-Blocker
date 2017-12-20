@@ -144,80 +144,45 @@ function getTab(tabId, callback) {
 }
 
 function webListener(requestDetails) {
-    //Create an async promise..
-    var asyncCancel = new Promise((resolve, reject) => {
+    let request = new XMLHttpRequest();
+    request.open(requestDetails.method, requestDetails.url, false); //No longer async.. Chrome and Firefox are leaking requests..
+    request.send(requestDetails.requestBody);
 
-        let request = new XMLHttpRequest();
+    if (request.status === 200) {
+        //Get the tab that made the request..
+        var requestTabURL = undefined;
+        getTab(request.tabId, function (tabURL) {
+            requestTabURL = tabURL;
+        });
 
-        request.onload = function () {
-            if (request.readyState === 4) {
-                if (request.status === 200) {
+        while (requestTabURL === undefined) {
+            console.log("WAITING..");
+        }
 
-                    //Get the tab that made the request..
-                    getTab(request.tabId, function (tabURL) {
+        if (requestTabURL != null) {
+            if (!urlMatches(requestTabURL)) {
 
-                        //if that tab has a valid url..
-                        if (tabURL !== undefined && tabURL !== null && tabURL.length > 0) {
-
-                            //if the tab is not in the exceptions list.. then handle it..
-                            if (!urlMatches(tabURL)) {
-
-                                //handle it..
-                                if (dataContains(requestDetails.url, request.responseText, urls) || dataContains(requestDetails.url, request.responseText, words)) {
-                                    reject({
-                                        url: requestDetails.url,
-                                        cancel: true
-                                    })
-                                }
-                                else {
-                                    resolve({
-                                        cancel: false
-                                    })
-                                }
-                            }
-                            else { //don't handle it.. just let it pass through..
-                                resolve({
-                                    cancel: false
-                                })
-                            }
-                        }
-                        else {
-
-                            //else the tab's url is invalid or something went wrong.. handle it anyway..
-                            if (dataContains(requestDetails.url, request.responseText, urls) || dataContains(requestDetails.url, request.responseText, words)) {
-                                reject({
-                                    url: requestDetails.url,
-                                    cancel: true
-                                })
-                            }
-                            else {
-                                resolve({
-                                    cancel: false
-                                })
-                            }
-                        }
-                    });
+                //handle it..
+                if (dataContains(requestDetails.url, request.responseText, urls) || dataContains(requestDetails.url, request.responseText, words)) {
+                    return { cancel: true };
                 }
                 else {
-                    //cancel on fail..
-                    reject({
-                        url: requestDetails.url,
-                        cancel: true
-                    })
+                    return { cancel: false };
                 }
             }
-        };
+            else { //don't handle it.. just let it pass through..
+                return { cancel: false };
+            }
+        }
+        else {
+            if (dataContains(requestDetails.url, request.responseText, urls) || dataContains(requestDetails.url, request.responseText, words)) {
+                return { cancel: true }
+            }
+        }
+        return { cancel: false }
+    }
 
-        //Execute the request asynchronously..
-        request.open('GET', requestDetails.url, true);
-        request.send();
-    });
-
-    asyncCancel.catch(reason => {
-        console.log(JSON.stringify(reason));
-    });
-
-    return asyncCancel;
+    return { cancel: true }
 }
 
 browser.webRequest.onBeforeRequest.addListener(
