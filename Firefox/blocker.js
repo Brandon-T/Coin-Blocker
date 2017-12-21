@@ -3,6 +3,7 @@ var words = ["Miner", "CoinHive", "Coin-Hive", "CryptoNight", "CryptoNightWASM",
     "TWluZXI=", "Q29pbkhpdmU=", "Q29pbi1IaXZl", "Q3J5cHRvTmlnaHQ=", "Q3J5cHRvTmlnaHRXQVNN", "Q05pZ2h0", "SGFzaGVzUGVyU2Vjb25k", "SGFzaF9BY2NlcHRlZA=="];
 var exception_urls = [];
 var currentTabURL = window.location.href;
+var tabs = {};
 
 function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
@@ -24,6 +25,7 @@ function urlMatches(url) {
 function stringContains(str, words) {
     for (var i = 0; i < words.length; ++i) {
         if (str.toLowerCase().indexOf(words[i].toLowerCase()) !== -1) {
+            console.log("FOUND WORD: " + words[i]);
             return true;
         }
     }
@@ -79,52 +81,10 @@ function scanIfPossible() {
     }
 }
 
-chrome.storage.sync.get({
-    exceptions_domains: [],
-}, function (items) {
-    exception_urls = [];
-    var domains = items["exceptions_domains"];
-    $.each(domains, function (index, value) {
-        if (value.length > 0) {
-            exception_urls.push(value.toLowerCase());
-        }
-    });
-
-    scanIfPossible()
-});
-
-chrome.storage.onChanged.addListener(function (changes, namespace) {
-    chrome.storage.sync.get({
-        exceptions_domains: [],
-    }, function (items) {
-        exception_urls = [];
-        var domains = items["exceptions_domains"];
-        $.each(domains, function (index, value) {
-            if (value.length > 0) {
-                exception_urls.push(value.toLowerCase());
-            }
-        });
-
-        scanIfPossible()
-    });
-});
-
-
-
-
-
-
-browser.browserAction.onClicked.addListener(function () {
-    browser.runtime.openOptionsPage();
-});
 
 function dataContains(url, str, words) {
     for (var i = 0; i < words.length; ++i) {
         if (str.toLowerCase().indexOf(words[i].toLowerCase()) !== -1) {
-
-            //let the content script know that the webpage is making dangerous requests..
-            //sendMessage({ messageId: -1, badURL: url });
-
             return true; //cancel the request.. it's dangerous..
         }
     }
@@ -150,20 +110,18 @@ function webListener(requestDetails) {
 
     if (request.status === 200) {
         //Get the tab that made the request..
-        var requestTabURL = undefined;
-        getTab(request.tabId, function (tabURL) {
-            requestTabURL = tabURL;
-        });
-
-        while (requestTabURL === undefined) {
-            console.log("WAITING..");
+        var requestTabURL = null;
+        if (requestDetails.tabId !== -1) {
+            requestTabURL = tabs[requestDetails.tabId].url;
         }
 
-        if (requestTabURL != null) {
+        if (requestTabURL !== null) {
             if (!urlMatches(requestTabURL)) {
 
                 //handle it..
                 if (dataContains(requestDetails.url, request.responseText, urls) || dataContains(requestDetails.url, request.responseText, words)) {
+                    console.log("BLOCKING POTENTIALLY DANGEROUS URL: " + requestDetails.url);
+                    // sendMessage({ messageId: -1, badURL: requestDetails.url });
                     return { cancel: true };
                 }
                 else {
@@ -171,11 +129,13 @@ function webListener(requestDetails) {
                 }
             }
             else { //don't handle it.. just let it pass through..
+                console.log("URL ALLOWED: " + requestDetails.url);
                 return { cancel: false };
             }
         }
         else {
             if (dataContains(requestDetails.url, request.responseText, urls) || dataContains(requestDetails.url, request.responseText, words)) {
+                console.log("BLOCKING POTENTIALLY DANGEROUS URL: " + requestDetails.url);
                 return { cancel: true }
             }
         }
@@ -185,6 +145,61 @@ function webListener(requestDetails) {
     return { cancel: true }
 }
 
+
+//Load the user's settings..
+chrome.storage.sync.get({
+    exceptions_domains: [],
+}, function (items) {
+    exception_urls = [];
+    var domains = items["exceptions_domains"];
+    $.each(domains, function (index, value) {
+        if (value.length > 0) {
+            exception_urls.push(value.toLowerCase());
+        }
+    });
+
+    scanIfPossible()
+});
+
+//If the settings change..
+chrome.storage.onChanged.addListener(function (changes, namespace) {
+    chrome.storage.sync.get({
+        exceptions_domains: [],
+    }, function (items) {
+        exception_urls = [];
+        var domains = items["exceptions_domains"];
+        $.each(domains, function (index, value) {
+            if (value.length > 0) {
+                exception_urls.push(value.toLowerCase());
+            }
+        });
+
+        scanIfPossible()
+    });
+});
+
+//Listen for tab changes..
+chrome.tabs.query({}, function (results) {
+    results.forEach(function (tab) {
+        tabs[tab.id] = tab;
+    });
+});
+
+chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
+    tabs[tab.id] = tab;
+    // sendMessage({ messageId: 0, tabIdentifier: tabId, tabURL: tab.url });
+});
+
+chrome.tabs.onRemoved.addListener(function (tabId) {
+    delete tabs[tabId];
+});
+
+//Listen for button action..
+browser.browserAction.onClicked.addListener(function () {
+    browser.runtime.openOptionsPage();
+});
+
+//Listen to all requests made by the page..
 browser.webRequest.onBeforeRequest.addListener(
     webListener, {
         urls: ["<all_urls>"],

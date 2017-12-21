@@ -2,6 +2,7 @@ var urls = ["Coin-Hive", "CoinHive"];
 var words = ["Miner", "CoinHive", "Coin-Hive", "CryptoNight", "CryptoNightWASM", "CNight", "HashesPerSecond", "Hash_Accepted",
     "TWluZXI=", "Q29pbkhpdmU=", "Q29pbi1IaXZl", "Q3J5cHRvTmlnaHQ=", "Q3J5cHRvTmlnaHRXQVNN", "Q05pZ2h0", "SGFzaGVzUGVyU2Vjb25k", "SGFzaF9BY2NlcHRlZA=="];
 var exception_urls = [];
+var tabs = {};
 
 function urlMatches(url) {
     if (exception_urls.length > 0) {
@@ -42,10 +43,6 @@ function getTab(tabId, callback) {
 function dataContains(url, str, words) {
     for (var i = 0; i < words.length; ++i) {
         if (str.toLowerCase().indexOf(words[i].toLowerCase()) !== -1) {
-
-            //let the content script know that the webpage is making dangerous requests..
-            sendMessage({ messageId: -1, badURL: url });
-
             return true; //cancel the request.. it's dangerous..
         }
     }
@@ -61,20 +58,18 @@ function webListener(requestDetails) {
 
     if (request.status === 200) {
         //Get the tab that made the request..
-        var requestTabURL = undefined;
-        getTab(request.tabId, function (tabURL) {
-            requestTabURL = tabURL;
-        });
-
-        while (requestTabURL === undefined) {
-            console.log("WAITING..");
+        var requestTabURL = null;
+        if (requestDetails.tabId !== -1) {
+            requestTabURL = tabs[requestDetails.tabId].url;
         }
 
-        if (requestTabURL != null) {
+        if (requestTabURL !== null) {
             if (!urlMatches(requestTabURL)) {
 
                 //handle it..
                 if (dataContains(requestDetails.url, request.responseText, urls) || dataContains(requestDetails.url, request.responseText, words)) {
+                    console.log("BLOCKING POTENTIALLY DANGEROUS URL: " + requestDetails.url);
+                    sendMessage({ messageId: -1, badURL: requestDetails.url });
                     return { cancel: true };
                 }
                 else {
@@ -82,11 +77,13 @@ function webListener(requestDetails) {
                 }
             }
             else { //don't handle it.. just let it pass through..
+                console.log("URL ALLOWED: " + requestDetails.url);
                 return { cancel: false };
             }
         }
         else {
             if (dataContains(requestDetails.url, request.responseText, urls) || dataContains(requestDetails.url, request.responseText, words)) {
+                console.log("BLOCKING POTENTIALLY DANGEROUS URL: " + requestDetails.url);
                 return { cancel: true }
             }
         }
@@ -200,15 +197,25 @@ chrome.storage.onChanged.addListener(function (changes, namespace) {
     });
 });
 
+//Listen for tab changes..
+chrome.tabs.query({}, function (results) {
+    results.forEach(function (tab) {
+        tabs[tab.id] = tab;
+    });
+});
+
+chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
+    tabs[tab.id] = tab;
+    sendMessage({ messageId: 0, tabIdentifier: tabId, tabURL: tab.url });
+});
+
+chrome.tabs.onRemoved.addListener(function (tabId) {
+    delete tabs[tabId];
+});
 
 //Listen for button action..
 chrome.browserAction.onClicked.addListener(function (tab) {
     chrome.runtime.openOptionsPage();
-});
-
-//Listen for tab changes..
-chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
-    sendMessage({ messageId: 0, tabIdentifier: tabId, tabURL: tab.url });
 });
 
 //Listen to all requests made by the page..
